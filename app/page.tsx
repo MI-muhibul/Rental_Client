@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import SectionContainer from '@/components/ui/SectionContainer';
 import Heading from '@/components/ui/Heading';
 import Button from '@/components/ui/Button';
@@ -42,36 +43,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-base-100 text-base-content">
       {/* Industrial Navigation Header */}
-      <header className="border-b border-base-300 bg-base-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary flex items-center justify-center font-heading font-bold text-white text-lg rounded-sm shadow-md shadow-orange-500/20">
-              H
-            </div>
-            <span className="font-heading font-bold text-xl uppercase tracking-wider text-white">
-              HEAVY<span className="text-primary">RENT</span>
-            </span>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-8 font-heading text-sm uppercase tracking-wider text-gray-300">
-            <Link href="/equipment" className="hover:text-primary transition-colors">
-              Fleet Catalog
-            </Link>
-            <Link href="/dashboard" className="hover:text-primary transition-colors">
-              Operations
-            </Link>
-            <a href="#standards" className="hover:text-primary transition-colors">
-              Safety Standards
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link href="/equipment">
-              <Button size="sm">Browse Equipment</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="relative border-b border-base-300 bg-[#121519] overflow-hidden">
