@@ -41,6 +41,12 @@ export default function NotFound() {
             </Button>
           </Link>
         </div>
+
+        <div className="mt-4 text-center">
+          <Link href="/how-it-works" className="text-[11px] font-mono text-gray-400 hover:text-primary underline">
+            Need Help? View How Equipment Deployment Works
+          </Link>
+        </div>
       </div>
     </div>
   );
