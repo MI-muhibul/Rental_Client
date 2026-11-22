@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { BookNowModal } from '@/components/BookNowModal';
 import { API_BASE_URL } from '@/lib/api';
 
 interface EquipmentOwner {
@@ -285,21 +286,8 @@ function EquipmentDetailView() {
   const [isFavorite, setIsFavorite] = useState<boolean>(false);
   const [favLoading, setFavLoading] = useState<boolean>(false);
 
-  // Booking Modal & Quote state
+  // Booking Modal state
   const [isBookingOpen, setIsBookingOpen] = useState<boolean>(false);
-  const [startDate, setStartDate] = useState<string>(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState<string>(() => {
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 4);
-    return nextWeek.toISOString().split('T')[0];
-  });
-  const [bookingQuantity, setBookingQuantity] = useState<number>(1);
-  const [deliveryMethod, setDeliveryMethod] = useState<'yard_pickup' | 'site_delivery'>('site_delivery');
-  const [submittingBooking, setSubmittingBooking] = useState<boolean>(false);
 
   // 1. Fetch Equipment Details
   useEffect(() => {
@@ -455,102 +443,6 @@ function EquipmentDetailView() {
     } finally {
       setFavLoading(false);
     }
-  };
-
-  // Duration & Pricing Calculation
-  const quoteCalculation = useMemo(() => {
-    if (!equipment) {
-      return { durationDays: 1, baseTotal: 0, maintenanceFee: 0, deposit: 0, freightFee: 0, grandTotal: 0 };
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = end.getTime() - start.getTime();
-    const durationDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-    const rate = equipment.price || equipment.pricePerDay || 100;
-    const qty = Math.max(1, bookingQuantity);
-
-    let baseRateTotal = 0;
-    if (equipment.rentalType === 'weekly') {
-      const weeks = Math.max(1, Math.ceil(durationDays / 7));
-      baseRateTotal = weeks * rate * qty;
-    } else if (equipment.rentalType === 'monthly') {
-      const months = Math.max(1, Math.ceil(durationDays / 30));
-      baseRateTotal = months * rate * qty;
-    } else {
-      // Daily
-      baseRateTotal = durationDays * rate * qty;
-    }
-
-    const maintenanceFee = Math.round(baseRateTotal * 0.05); // 5% environmental/maintenance surcharge
-    const deposit = Math.round(rate * 0.5); // 50% single day deposit
-    const freightFee = deliveryMethod === 'site_delivery' ? 120 : 0;
-    const grandTotal = baseRateTotal + maintenanceFee + freightFee;
-
-    return {
-      durationDays,
-      baseTotal: baseRateTotal,
-      maintenanceFee,
-      deposit,
-      freightFee,
-      grandTotal,
-    };
-  }, [equipment, startDate, endDate, bookingQuantity, deliveryMethod]);
-
-  // Handle Book Now Form Submission
-  const handleConfirmBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!equipment) return;
-
-    if (new Date(endDate) < new Date(startDate)) {
-      notifyError('End date cannot be earlier than start date.');
-      return;
-    }
-
-    const confirmed = await confirmAction({
-      title: 'Mobilize Equipment Rental?',
-      text: `Authorize deployment of ${bookingQuantity}x ${equipment.name} from ${startDate} to ${endDate} for an estimated $${quoteCalculation.grandTotal.toLocaleString()}?`,
-      confirmButtonText: 'Confirm & Authorize Dispatch',
-      cancelButtonText: 'Review Parameters',
-    });
-
-    if (!confirmed) return;
-
-    setSubmittingBooking(true);
-
-    try {
-      // Attempt backend checkout session or quote confirmation
-      const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/payments/checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          equipmentId: id,
-          startDate,
-          endDate,
-          quantity: bookingQuantity,
-        }),
-      });
-
-      if (res.ok) {
-        const checkoutData = await res.json();
-        if (checkoutData.url) {
-          window.location.href = checkoutData.url;
-          return;
-        }
-      }
-    } catch {
-      // Continue to high-fidelity success confirmation
-    }
-
-    // Success fallback flow
-    setTimeout(() => {
-      setSubmittingBooking(false);
-      setIsBookingOpen(false);
-      notifySuccess(`Deployment Request Mobilized! Booking Ref: #HR-${Math.floor(100000 + Math.random() * 900000)}`);
-      router.push('/dashboard');
-    }, 800);
   };
 
   // Image Gallery list
@@ -977,174 +869,14 @@ function EquipmentDetailView() {
         </div>
       </div>
 
-      {/* Interactive Booking Modal / Quote Confirmation Drawer */}
-      <AnimatePresence>
-        {isBookingOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#181818] border-2 border-[#FF5500] max-w-xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto"
-            >
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setIsBookingOpen(false)}
-                className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
-              {/* Modal Header */}
-              <div className="border-b border-[#2A2A2A] pb-4 mb-6">
-                <span className="text-xs font-mono text-[#FF5500] font-bold uppercase tracking-widest">
-                  Deployment Authorization
-                </span>
-                <h2 className="font-heading font-black text-xl sm:text-2xl uppercase tracking-tight text-neutral-100 mt-1">
-                  Book {equipment.name}
-                </h2>
-                <div className="text-xs font-mono text-neutral-400 mt-1">
-                  Yard Location: {equipment.location} • Rate: ${equipment.price} / {equipment.rentalType}
-                </div>
-              </div>
-
-              {/* Booking Form */}
-              <form onSubmit={handleConfirmBooking} className="space-y-5">
-                {/* Date Range Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-mono uppercase text-neutral-300 font-bold mb-1.5">
-                      Mobilization Start Date
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={startDate}
-                      min={new Date().toISOString().split('T')[0]}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full bg-[#131313] border border-[#333333] px-3.5 py-2.5 text-sm font-mono text-neutral-100 focus:outline-none focus:border-[#FF5500]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-mono uppercase text-neutral-300 font-bold mb-1.5">
-                      Demobilization End Date
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={endDate}
-                      min={startDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-[#131313] border border-[#333333] px-3.5 py-2.5 text-sm font-mono text-neutral-100 focus:outline-none focus:border-[#FF5500]"
-                    />
-                  </div>
-                </div>
-
-                {/* Quantity & Delivery Method */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-mono uppercase text-neutral-300 font-bold mb-1.5">
-                      Equipment Units
-                    </label>
-                    <div className="flex items-center border border-[#333333] bg-[#131313]">
-                      <button
-                        type="button"
-                        onClick={() => setBookingQuantity((prev) => Math.max(1, prev - 1))}
-                        className="px-4 py-2 text-neutral-400 hover:text-white font-mono font-bold"
-                      >
-                        -
-                      </button>
-                      <span className="flex-1 text-center font-mono font-bold text-sm text-neutral-100">
-                        {bookingQuantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setBookingQuantity((prev) => Math.min(equipment.quantity, prev + 1))}
-                        className="px-4 py-2 text-neutral-400 hover:text-white font-mono font-bold"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <span className="text-[10px] font-mono text-neutral-500 mt-1 block">
-                      Max Available: {equipment.quantity} units
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono uppercase text-neutral-300 font-bold mb-1.5">
-                      Logistics Mode
-                    </label>
-                    <select
-                      value={deliveryMethod}
-                      onChange={(e) => setDeliveryMethod(e.target.value as any)}
-                      className="w-full bg-[#131313] border border-[#333333] px-3 py-2.5 text-xs font-mono text-neutral-100 focus:outline-none focus:border-[#FF5500]"
-                    >
-                      <option value="site_delivery">Jobsite Freight Transfer (+$120)</option>
-                      <option value="yard_pickup">Direct Yard Terminal Pickup ($0)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Live Quote Breakdown */}
-                <div className="bg-[#121212] border border-[#2E2E2E] p-4 space-y-2.5 font-mono text-xs">
-                  <div className="flex justify-between text-neutral-400">
-                    <span>Duration:</span>
-                    <span className="text-neutral-200 font-bold">{quoteCalculation.durationDays} Operational Days</span>
-                  </div>
-                  <div className="flex justify-between text-neutral-400">
-                    <span>Base Machinery Rental:</span>
-                    <span className="text-neutral-200">${quoteCalculation.baseTotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-neutral-400">
-                    <span>Environmental & Maintenance (5%):</span>
-                    <span className="text-neutral-200">${quoteCalculation.maintenanceFee.toLocaleString()}</span>
-                  </div>
-                  {quoteCalculation.freightFee > 0 && (
-                    <div className="flex justify-between text-neutral-400">
-                      <span>Jobsite Mobilization Freight:</span>
-                      <span className="text-neutral-200">${quoteCalculation.freightFee.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-neutral-400 pt-2 border-t border-[#252525]">
-                    <span className="text-neutral-300">Refundable Security Authorization:</span>
-                    <span className="text-emerald-400">${quoteCalculation.deposit.toLocaleString()} (Held)</span>
-                  </div>
-                  <div className="flex justify-between text-sm pt-2 border-t border-[#333333] font-heading font-black text-neutral-100">
-                    <span>Total Estimated Mobilization:</span>
-                    <span className="text-[#FF5500] text-lg">${quoteCalculation.grandTotal.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Submit Action */}
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={submittingBooking}
-                    className="w-full py-4 px-6 bg-[#FF5500] hover:bg-[#E64A00] text-black font-heading font-black text-sm uppercase tracking-widest transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-                  >
-                    {submittingBooking ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        <span>Mobilizing Fleet Unit...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Authorize Dispatch & Complete Order</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Dedicated Book Now Modal with Live Quote & Stripe Checkout */}
+      {equipment && (
+        <BookNowModal
+          isOpen={isBookingOpen}
+          onClose={() => setIsBookingOpen(false)}
+          equipment={equipment}
+        />
+      )}
     </div>
   );
 }
