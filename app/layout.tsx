@@ -20,7 +20,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "HEAVYRENT // Heavy Equipment & Machinery Rental Marketplace",
   description:
-    "Bold industrial equipment rental platform for excavators, loaders, compaction, and construction machinery.",
+    "Bold industrial equipment rental platform for excavators, loaders, compaction, and commercial construction machinery.",
+  keywords: ["equipment rental", "machinery rental", "heavy equipment", "excavators", "contractors", "construction fleet"],
+  authors: [{ name: "HEAVYRENT Fleet Logistics" }],
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  themeColor: "#ff6600",
 };
 
 export default function RootLayout({
