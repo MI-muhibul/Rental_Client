@@ -12,15 +12,21 @@ let clientPromise: Promise<MongoClient>;
 if (!uri) {
   // In development without env configured yet, provide lazy placeholder promise
   clientPromise = Promise.reject(new Error('MONGODB_URI is not defined in environment variables.'));
-} else if (process.env.NODE_ENV === 'development') {
+} else {
+  // Preserve cached connection promise across warm serverless invocations to prevent 504 timeouts
   if (!global._mongoClientPromise) {
-    const client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+    const client = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+    });
+    global._mongoClientPromise = client.connect().catch((err) => {
+      global._mongoClientPromise = undefined;
+      throw err;
+    });
   }
   clientPromise = global._mongoClientPromise;
-} else {
-  const client = new MongoClient(uri);
-  clientPromise = client.connect();
 }
 
 export default clientPromise;
+
