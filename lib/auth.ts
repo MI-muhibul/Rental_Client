@@ -7,28 +7,40 @@ const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/equipment_rent
 
 declare global {
   // eslint-disable-next-line no-var
-  var _authMongoClientPromise: Promise<MongoClient> | undefined;
+  var _authMongoClient: MongoClient | undefined;
+  var _authDb: any;
 }
 
-let clientPromise: Promise<MongoClient>;
-
-if (!global._authMongoClientPromise) {
-  const client = new MongoClient(uri);
-  global._authMongoClientPromise = client.connect().catch((err) => {
-    global._authMongoClientPromise = undefined;
-    throw err;
+// Reuse a single MongoClient instance across serverless invocations
+if (!global._authMongoClient) {
+  global._authMongoClient = new MongoClient(uri, {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 10000,
   });
 }
-clientPromise = global._authMongoClientPromise;
 
-const client = new MongoClient(uri);
+const client = global._authMongoClient;
 const db = client.db('equipment_rental');
+
+// Determine base URL — supports both alpha and kohl deployments
+const getBaseURL = () => {
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+};
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || 'heavyrent-secret-key-32-characters-minimum-length',
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
+  baseURL: getBaseURL(),
+  // Trust both production URLs so kohl and alpha both work
+  trustedOrigins: [
+    'http://localhost:3000',
+    'https://rental-client-alpha.vercel.app',
+    'https://rental-client-kohl.vercel.app',
+    'https://rental-client-scarlet13.vercel.app',
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ],
   database: mongodbAdapter(db, {
     client,
   }),
