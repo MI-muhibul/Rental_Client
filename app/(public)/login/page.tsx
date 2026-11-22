@@ -62,29 +62,40 @@ export default function LoginPage() {
         throw new Error(error.message || 'Invalid email or password');
       }
 
-      // 2. Synchronize user record to backend MongoDB collection
+      // 2. Determine Clearance Role
+      const isSuperAdmin = email.trim().toLowerCase() === 'admin@heavyrent.com';
+      const userRole = isSuperAdmin ? 'admin' : ((data?.user as any)?.role || 'customer');
+
+      // 3. Synchronize user record to backend MongoDB collection
       await syncUserToBackend({
         email: email.trim(),
-        name: data?.user?.name || '',
+        name: data?.user?.name || (isSuperAdmin ? 'Superintendent Admin' : ''),
         photo: data?.user?.image || '',
         avatar: data?.user?.image || '',
-        role: (data?.user as any)?.role || 'customer',
+        role: userRole,
       });
 
-      // 3. Show SweetAlert success confirmation
+      // 4. Show SweetAlert success confirmation
       await Swal.fire({
         title: 'Authentication Successful',
-        text: 'Access granted to Heavy Equipment Marketplace.',
+        text: `Clearance confirmed as ${userRole.toUpperCase()}. Entering management terminal...`,
         icon: 'success',
         background: '#1a1e24',
         color: '#f4f3ee',
         confirmButtonColor: '#ff6600',
-        confirmButtonText: 'Proceed to Fleet',
-        timer: 2000,
+        confirmButtonText: 'Enter Terminal',
+        timer: 1800,
         timerProgressBar: true,
       });
 
-      router.push('/equipment');
+      // 5. Intelligent Role-Based Redirection
+      if (userRole === 'admin') {
+        router.push('/dashboard/admin');
+      } else if (userRole === 'owner') {
+        router.push('/dashboard/owner');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed. Please verify credentials.');
     } finally {

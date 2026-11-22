@@ -114,9 +114,21 @@ export default function Navbar() {
                 <div className="h-6 w-px bg-base-300 mx-1" />
 
                 {/* Dashboard Shortcut */}
-                <Link href="/dashboard">
-                  <button className="px-3 py-1.5 bg-base-200 hover:bg-base-300 text-xs font-heading font-bold uppercase tracking-wider text-gray-200 rounded-xs border border-base-300 transition-colors">
-                    Dashboard
+                <Link
+                  href={
+                    role?.toLowerCase() === 'admin'
+                      ? '/dashboard/admin'
+                      : role?.toLowerCase() === 'owner'
+                      ? '/dashboard/owner'
+                      : '/dashboard'
+                  }
+                >
+                  <button className="px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-xs font-heading font-bold uppercase tracking-wider text-primary rounded-xs border border-primary/40 transition-colors">
+                    {role?.toLowerCase() === 'admin'
+                      ? 'Admin Command'
+                      : role?.toLowerCase() === 'owner'
+                      ? 'Owner Fleet'
+                      : 'Dashboard'}
                   </button>
                 </Link>
 
@@ -239,7 +251,13 @@ export default function Navbar() {
                 {/* Dashboard Link for Authenticated Users */}
                 {isAuthenticated && (
                   <Link
-                    href="/dashboard"
+                    href={
+                      role?.toLowerCase() === 'admin'
+                        ? '/dashboard/admin'
+                        : role?.toLowerCase() === 'owner'
+                        ? '/dashboard/owner'
+                        : '/dashboard'
+                    }
                     onClick={() => setMobileDrawerOpen(false)}
                     className={`flex items-center justify-between px-3 py-2.5 font-heading text-sm font-bold uppercase tracking-wider rounded-xs transition-colors ${
                       pathname.startsWith('/dashboard')
@@ -247,8 +265,16 @@ export default function Navbar() {
                         : 'text-gray-300 hover:bg-base-300 hover:text-white'
                     }`}
                   >
-                    <span>Dashboard Console</span>
-                    <span className="hazard-badge text-[10px]">OPERATIONS</span>
+                    <span>
+                      {role?.toLowerCase() === 'admin'
+                        ? 'Admin Command Center'
+                        : role?.toLowerCase() === 'owner'
+                        ? 'Owner Fleet Console'
+                        : 'Dashboard Console'}
+                    </span>
+                    <span className="hazard-badge text-[10px]">
+                      {role?.toUpperCase() || 'OPERATIONS'}
+                    </span>
                   </Link>
                 )}
                 {/* Mobile Drawer Theme Mode Switch */}

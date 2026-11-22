@@ -7,6 +7,9 @@ export interface AuthUser {
   name: string;
   email: string;
   image?: string | null;
+  photo?: string | null;
+  phone?: string | null;
+  address?: string | null;
   role?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -17,11 +20,12 @@ export function useAuth() {
   const { data: session, isPending, error } = useSession();
 
   const user = (session?.user as AuthUser) || null;
-  const role = (user?.role as string) || 'customer';
+  const isSuperAdmin = user?.email?.toLowerCase() === 'admin@heavyrent.com';
+  const role = isSuperAdmin ? 'admin' : ((user?.role as string) || 'customer');
   const loading = isPending;
 
   return {
-    user,
+    user: user ? ({ ...user, role: isSuperAdmin ? 'admin' : (user.role || 'customer') } as AuthUser) : null,
     role,
     loading,
     session,

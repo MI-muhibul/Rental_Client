@@ -22,11 +22,13 @@ if (!global._authMongoClientPromise) {
 clientPromise = global._authMongoClientPromise;
 
 const client = new MongoClient(uri);
-const db = client.db();
+const db = client.db('equipment_rental');
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || 'heavyrent-secret-key-32-characters-minimum-length',
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
+  baseURL:
+    process.env.BETTER_AUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
   database: mongodbAdapter(db, {
     client,
   }),
