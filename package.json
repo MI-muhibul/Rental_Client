@@ -1,6 +1,7 @@
 {
-  "name": "client",
-  "version": "0.1.0",
+  "name": "heavyrent-client",
+  "version": "1.0.0",
+  "description": "HEAVYRENT — Industrial Heavy Equipment & Machinery Rental Marketplace Client",
   "private": true,
   "scripts": {
     "dev": "next dev",
