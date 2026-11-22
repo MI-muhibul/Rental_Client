@@ -79,6 +79,12 @@ export default function ErrorBoundary({
             </Button>
           </Link>
         </div>
+
+        <div className="mt-4 text-center">
+          <Link href="/contact" className="text-[11px] font-mono text-gray-400 hover:text-primary underline">
+            Report Issue to Fleet Support Hotline
+          </Link>
+        </div>
       </div>
     </div>
   );
