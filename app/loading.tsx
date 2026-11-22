@@ -21,8 +21,9 @@ export default function Loading() {
         Loading System Telemetry...
       </div>
       
-      <div className="text-xs font-mono text-gray-500 mt-1">
-        Synchronizing machinery fleet data // please standby
+      <div className="text-xs font-mono text-gray-400 mt-1 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+        <span>Synchronizing machinery fleet data // please standby</span>
       </div>
     </div>
   );
