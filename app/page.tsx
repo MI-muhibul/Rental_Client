@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import SectionContainer from '@/components/ui/SectionContainer';
 import Heading from '@/components/ui/Heading';
 import Button from '@/components/ui/Button';
@@ -182,22 +183,7 @@ export default function HomePage() {
       </section>
 
       {/* Industrial Footer */}
-      <footer className="mt-auto border-t border-base-300 bg-[#121519] py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-primary rounded-xs flex items-center justify-center font-bold text-white text-xs">
-              H
-            </div>
-            <span className="font-heading font-bold uppercase tracking-wider text-sm text-gray-300">
-              HEAVY<span className="text-primary">RENT</span> // Heavy Equipment Marketplace
-            </span>
-          </div>
-
-          <div className="text-xs font-mono text-gray-500">
-            SYSTEM STATUS: ALL FLEET TELEMETRY OPERATIONAL
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
