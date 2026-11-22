@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -80,8 +81,9 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Desktop Auth Controls */}
-          <div className="hidden lg:flex items-center gap-4">
+          {/* Desktop Auth Controls & Theme Toggle */}
+          <div className="hidden lg:flex items-center gap-3">
+            <ThemeToggle />
             {loading ? (
               <div className="w-24 h-9 bg-base-300 animate-pulse rounded-xs" />
             ) : isAuthenticated && user ? (
@@ -141,12 +143,13 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Hamburger Toggle Button */}
+          {/* Mobile Actions: Theme Toggle & Hamburger Toggle Button */}
           <div className="flex lg:hidden items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => setMobileDrawerOpen(true)}
               aria-label="Open Navigation Menu"
-              className="p-2.5 text-gray-300 hover:text-white bg-base-300/60 rounded-xs border border-base-300"
+              className="p-2 text-gray-300 hover:text-white bg-base-300/60 rounded-xs border border-base-300 cursor-pointer"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -248,6 +251,11 @@ export default function Navbar() {
                     <span className="hazard-badge text-[10px]">OPERATIONS</span>
                   </Link>
                 )}
+                {/* Mobile Drawer Theme Mode Switch */}
+                <div className="mt-4 pt-4 border-t border-base-300 flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-xs">
+                  <span className="font-mono text-xs uppercase text-gray-300 font-bold">Theme Setting</span>
+                  <ThemeToggle />
+                </div>
               </nav>
             </div>
 

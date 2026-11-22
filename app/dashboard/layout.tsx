@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 export default function DashboardLayout({
   children,
@@ -98,6 +99,8 @@ export default function DashboardLayout({
                   {(user?.name || user?.email || 'U')[0].toUpperCase()}
                 </div>
               )}
+
+              <ThemeToggle />
 
               <button
                 onClick={() => signOut()}

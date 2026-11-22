@@ -26,6 +26,30 @@
   --radius-box: 0.25rem;
 }
 
+/* Custom DaisyUI Industrial Light Theme */
+@plugin "daisyui/theme" {
+  name: "industrial-light";
+  --color-primary: #ff6600;
+  --color-primary-content: #ffffff;
+  --color-secondary: #e2e8f0;
+  --color-secondary-content: #0f172a;
+  --color-accent: #d97706;
+  --color-accent-content: #ffffff;
+  --color-neutral: #0f172a;
+  --color-neutral-content: #f8fafc;
+  --color-base-100: #f8fafc;
+  --color-base-200: #f1f5f9;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #0f172a;
+  --color-info: #0284c7;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.25rem;
+}
+
 :root {
   --font-heading: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
@@ -255,4 +279,105 @@
   letter-spacing: 0.05em;
   padding: 0.25rem 0.5rem;
   border-radius: 0.125rem;
+}
+
+/* =========================================================================
+   HIGH-CONTRAST LIGHT MODE SPECIFIC OVERRIDES
+   ========================================================================= */
+html[data-theme="industrial-light"] {
+  color-scheme: light;
+}
+
+html[data-theme="industrial-light"] body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html[data-theme="industrial-light"] .heading-xl,
+html[data-theme="industrial-light"] .heading-lg,
+html[data-theme="industrial-light"] .heading-md {
+  color: #0f172a;
+}
+
+html[data-theme="industrial-light"] .heading-sm {
+  color: #475569;
+}
+
+html[data-theme="industrial-light"] .industrial-card {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="industrial-light"] .industrial-card-footer {
+  border-top-color: #e2e8f0;
+}
+
+html[data-theme="industrial-light"] .btn-industrial-outline {
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+html[data-theme="industrial-light"] .btn-industrial-outline:hover:not(:disabled) {
+  border-color: #ff6600;
+  color: #ff6600;
+  background-color: rgba(255, 102, 0, 0.06);
+}
+
+/* Light mode adaptors for dark background containers */
+html[data-theme="industrial-light"] .bg-\[\#121212\] {
+  background-color: #f8fafc !important;
+}
+
+html[data-theme="industrial-light"] .bg-\[\#181818\] {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="industrial-light"] .bg-\[\#141414\],
+html[data-theme="industrial-light"] .bg-\[\#131313\],
+html[data-theme="industrial-light"] .bg-\[\#1a1a1a\],
+html[data-theme="industrial-light"] .bg-\[\#1c1c1c\],
+html[data-theme="industrial-light"] .bg-\[\#202020\],
+html[data-theme="industrial-light"] .bg-\[\#222222\],
+html[data-theme="industrial-light"] .bg-\[\#242424\],
+html[data-theme="industrial-light"] .bg-\[\#252525\] {
+  background-color: #f1f5f9 !important;
+}
+
+html[data-theme="industrial-light"] .border-\[\#2A2A2A\],
+html[data-theme="industrial-light"] .border-\[\#262626\],
+html[data-theme="industrial-light"] .border-\[\#2E2E2E\],
+html[data-theme="industrial-light"] .border-\[\#333333\],
+html[data-theme="industrial-light"] .border-\[\#242424\],
+html[data-theme="industrial-light"] .border-\[\#252525\],
+html[data-theme="industrial-light"] .border-\[\#2B2B2B\],
+html[data-theme="industrial-light"] .divide-\[\#2A2A2A\],
+html[data-theme="industrial-light"] .divide-\[\#242424\],
+html[data-theme="industrial-light"] .divide-\[\#262626\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+html[data-theme="industrial-light"] .text-\[\#F8F9FA\],
+html[data-theme="industrial-light"] .text-neutral-100,
+html[data-theme="industrial-light"] .text-neutral-200 {
+  color: #0f172a !important;
+}
+
+html[data-theme="industrial-light"] .text-neutral-300 {
+  color: #1e293b !important;
+}
+
+html[data-theme="industrial-light"] .text-neutral-400 {
+  color: #475569 !important;
+}
+
+html[data-theme="industrial-light"] .text-neutral-500 {
+  color: #64748b !important;
+}
+
+html[data-theme="industrial-light"] input,
+html[data-theme="industrial-light"] select,
+html[data-theme="industrial-light"] textarea {
+  color: #0f172a !important;
 }

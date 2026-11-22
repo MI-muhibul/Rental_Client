@@ -32,8 +32,31 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="industrial"
+      suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('theme');
+                  var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'industrial-light' : 'industrial');
+                  document.documentElement.setAttribute('data-theme', theme);
+                  if (theme === 'industrial-light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                  } else {
+                    document.documentElement.classList.remove('light');
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-body bg-base-100 text-base-content selection:bg-primary selection:text-white">
         {children}
         <Toaster
