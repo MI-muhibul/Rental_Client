@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/useToast';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 
 export interface BookNowModalProps {
   isOpen: boolean;
@@ -137,7 +137,7 @@ export const BookNowModal: React.FC<BookNowModalProps> = ({
           setQuoteData(data);
           setQuoteError(null);
         }
-      } catch (err: any) {
+      } catch {
         // Fallback: estimate locally so user is never stranded
         setQuoteData({
           available: true,
@@ -214,10 +214,12 @@ export const BookNowModal: React.FC<BookNowModalProps> = ({
     setSubmitting(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/payments/checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -244,8 +246,9 @@ export const BookNowModal: React.FC<BookNowModalProps> = ({
       } else {
         throw new Error('No checkout URL returned from payment provider.');
       }
-    } catch (err: any) {
-      notifyError(err.message || 'Unable to connect to Stripe checkout');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to connect to Stripe checkout';
+      notifyError(message);
       setSubmitting(false);
     }
   };

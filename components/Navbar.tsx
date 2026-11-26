@@ -11,11 +11,13 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, role, loading, signOut, isAuthenticated } = useAuth();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   // Close drawer upon route change
-  useEffect(() => {
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setMobileDrawerOpen(false);
-  }, [pathname]);
+  }
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {

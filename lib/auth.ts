@@ -8,7 +8,7 @@ const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/equipment_rent
 declare global {
   // eslint-disable-next-line no-var
   var _authMongoClient: MongoClient | undefined;
-  var _authDb: any;
+  var _authDb: unknown;
 }
 
 // Reuse a single MongoClient instance across serverless invocations
@@ -65,6 +65,42 @@ export const auth = betterAuth({
   plugins: [
     jwt(),
   ],
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            if (!user?.email) return;
+            const normalizedEmail = user.email.toLowerCase().trim();
+            const now = new Date();
+            const isSuperAdmin = normalizedEmail === 'admin@heavyrent.com';
+            const picture = user.image || undefined;
+
+            await db.collection('users').findOneAndUpdate(
+              { email: normalizedEmail },
+              {
+                $set: {
+                  updatedAt: now,
+                  ...(user.name ? { name: user.name } : {}),
+                  ...(picture ? { photo: picture, avatar: picture } : {}),
+                  ...(user.id ? { id: user.id } : {}),
+                  ...(isSuperAdmin ? { role: 'admin' } : {}),
+                },
+                $setOnInsert: {
+                  email: normalizedEmail,
+                  role: (user as { role?: string }).role || 'customer',
+                  createdAt: now,
+                },
+              },
+              { upsert: true }
+            );
+          } catch (err) {
+            console.error('[BetterAuth Hook] Failed to sync user to users collection:', err);
+          }
+        },
+      },
+    },
+  },
 });
 
 export default auth;

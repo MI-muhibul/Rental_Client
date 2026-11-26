@@ -27,7 +27,7 @@ interface FeaturedItem {
   images?: string[];
   brand?: string;
   model?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Fallback high-quality machinery items for Featured section
@@ -812,7 +812,7 @@ export default function HomePage() {
                   </div>
 
                   <p className="text-xs text-gray-300 leading-relaxed font-body mb-6 italic">
-                    "{rev.comment}"
+                    &ldquo;{rev.comment}&rdquo;
                   </p>
                 </div>
 

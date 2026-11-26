@@ -8,14 +8,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import { syncUserToBackend } from '@/lib/user-sync';
 
 // Types
 interface RentalBooking {
   _id: string;
   id?: string;
-  equipmentId?: any;
+  equipmentId?: string | { _id?: string; id?: string };
   equipmentName?: string;
   equipment?: {
     _id?: string;
@@ -42,7 +42,7 @@ interface RentalBooking {
 interface FavoriteItem {
   _id: string;
   id?: string;
-  equipmentId: any;
+  equipmentId: string | { _id?: string; id?: string };
   equipment?: {
     _id?: string;
     id?: string;
@@ -234,23 +234,24 @@ function CustomerDashboardContent() {
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
 
   // Initialize profile form with authenticated user
-  useEffect(() => {
-    if (user) {
-      setProfileName(user.name || '');
-      setProfileEmail(user.email || '');
-      setProfileImage(user.image || user.photo || '');
-      setProfilePhone(user.phone || '');
-      setProfileAddress(user.address || '');
-    }
-  }, [user]);
+  const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
+  if (user && syncedUserId !== user.id) {
+    setSyncedUserId(user.id);
+    setProfileName(user.name || '');
+    setProfileEmail(user.email || '');
+    setProfileImage(user.image || user.photo || '');
+    setProfilePhone(user.phone || '');
+    setProfileAddress(user.address || '');
+  }
 
   // 1. Fetch My Rentals with Pagination
   const fetchMyRentals = useCallback(async (page: number) => {
     setRentalsLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/bookings/mine?page=${page}&limit=${RENTALS_PER_PAGE}`,
-        { credentials: 'include' }
+        { headers: authHeaders, credentials: 'include' }
       );
       if (res.ok) {
         const data = await res.json();
@@ -261,8 +262,9 @@ function CustomerDashboardContent() {
         setRentalsLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend rentals fetch failed, using fallback fleet rentals:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend rentals fetch failed, using fallback fleet rentals:', message);
     }
 
     // Fallback pagination
@@ -275,14 +277,19 @@ function CustomerDashboardContent() {
   }, []);
 
   useEffect(() => {
-    fetchMyRentals(rentalsPage);
+    const timer = setTimeout(() => {
+      fetchMyRentals(rentalsPage);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [rentalsPage, fetchMyRentals]);
 
   // 2. Fetch Favorites
   const fetchFavorites = useCallback(async () => {
     setFavoritesLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/favorites`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -292,8 +299,9 @@ function CustomerDashboardContent() {
         setFavoritesLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend favorites fetch failed, using local fleet favorites:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend favorites fetch failed, using local fleet favorites:', message);
     }
 
     // Fallback favorites
@@ -302,7 +310,10 @@ function CustomerDashboardContent() {
   }, []);
 
   useEffect(() => {
-    fetchFavorites();
+    const timer = setTimeout(() => {
+      fetchFavorites();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchFavorites]);
 
   // Remove Favorite Handler
@@ -337,11 +348,13 @@ function CustomerDashboardContent() {
 
     // Call backend API
     try {
+      const authHeaders = await getAuthHeaders();
       const targetParam = equipmentId || favId;
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/favorites/${encodeURIComponent(targetParam)}`,
         {
           method: 'DELETE',
+          headers: authHeaders,
           credentials: 'include',
         }
       );
@@ -362,10 +375,11 @@ function CustomerDashboardContent() {
     setSavingProfile(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       // 1. Send PATCH /users/me
       const patchRes = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users/me`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify({
           name: profileName.trim(),
@@ -392,7 +406,7 @@ function CustomerDashboardContent() {
       } else {
         notifySuccess('Profile data saved to account record.');
       }
-    } catch (err: any) {
+    } catch {
       notifySuccess('Profile data saved to account record.');
     } finally {
       setSavingProfile(false);

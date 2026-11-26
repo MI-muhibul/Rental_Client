@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, getAuthHeaders } from './api';
 
 export interface SyncUserData {
   id?: string;
@@ -28,11 +28,14 @@ export async function syncUserToBackend(userData: SyncUserData) {
       role: userData.role || 'customer',
     };
 
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
+      credentials: 'include',
       body: JSON.stringify(payload),
     });
 
@@ -43,9 +46,10 @@ export async function syncUserToBackend(userData: SyncUserData) {
     }
 
     return await response.json().catch(() => ({}));
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-blocking catch to ensure frontend auth flow completes even if backend is offline
-    console.error('[UserSync Error] Could not sync user to backend server:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[UserSync Error] Could not sync user to backend server:', message);
     return null;
   }
 }

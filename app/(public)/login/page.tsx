@@ -64,7 +64,7 @@ export default function LoginPage() {
 
       // 2. Determine Clearance Role
       const isSuperAdmin = email.trim().toLowerCase() === 'admin@heavyrent.com';
-      const userRole = isSuperAdmin ? 'admin' : ((data?.user as any)?.role || 'customer');
+      const userRole = isSuperAdmin ? 'admin' : ((data?.user as { role?: string } | undefined)?.role || 'customer');
 
       // 3. Synchronize user record to backend MongoDB collection
       await syncUserToBackend({
@@ -96,8 +96,9 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed. Please verify credentials.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Authentication failed. Please verify credentials.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -109,7 +110,7 @@ export default function LoginPage() {
         provider: 'google',
         callbackURL: '/',
       });
-    } catch (err: any) {
+    } catch {
       toast.error('Google login could not be initiated.');
     }
   };

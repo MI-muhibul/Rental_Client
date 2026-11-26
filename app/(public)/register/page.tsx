@@ -50,8 +50,9 @@ export default function RegisterPage() {
       } else {
         throw new Error(data.error?.message || 'Failed to upload image');
       }
-    } catch (err: any) {
-      toast.error(`Image upload failed: ${err.message}`, { id: toastId });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Upload error';
+      toast.error(`Image upload failed: ${message}`, { id: toastId });
     } finally {
       setUploadingImage(false);
     }
@@ -130,8 +131,9 @@ export default function RegisterPage() {
       });
 
       router.push('/equipment');
-    } catch (err: any) {
-      toast.error(err.message || 'Registration error occurred');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration error occurred';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export default function RegisterPage() {
         provider: 'google',
         callbackURL: '/',
       });
-    } catch (err: any) {
+    } catch {
       toast.error('Google login could not be initiated.');
     }
   };

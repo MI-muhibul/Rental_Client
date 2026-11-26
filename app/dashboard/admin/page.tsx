@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+
+const emptySubscribe = () => () => {};
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -19,7 +21,7 @@ import {
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import { syncUserToBackend } from '@/lib/user-sync';
 
 // Types
@@ -52,7 +54,7 @@ interface AdminEquipment {
   image?: string;
   terms?: string;
   status: 'pending' | 'approved' | 'rejected' | 'available' | string;
-  ownerId?: any;
+  ownerId?: string | { _id?: string; id?: string };
   owner?: {
     id?: string;
     name?: string;
@@ -65,7 +67,7 @@ interface AdminEquipment {
 interface AdminBooking {
   _id: string;
   id?: string;
-  equipmentId?: any;
+  equipmentId?: string | { _id?: string; id?: string };
   equipmentName?: string;
   equipment?: {
     name?: string;
@@ -327,7 +329,7 @@ function AdminDashboardContent() {
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'equipment' | 'rentals' | 'profile'>('analytics');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [chartMounted, setChartMounted] = useState<boolean>(false);
+  const chartMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   // Analytics state
   const [analytics, setAnalytics] = useState<AdminAnalytics>(FALLBACK_ANALYTICS);
@@ -360,31 +362,29 @@ function AdminDashboardContent() {
   const [profileAddress, setProfileAddress] = useState<string>('');
   const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
 
-  useEffect(() => {
-    setChartMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      setProfileName(user.name || '');
-      setProfileEmail(user.email || '');
-      setProfilePhoto(user.image || user.photo || '');
-      setProfilePhone(user.phone || '');
-      setProfileAddress(user.address || '');
-    }
-  }, [user]);
+  const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
+  if (user && syncedUserId !== user.id) {
+    setSyncedUserId(user.id);
+    setProfileName(user.name || '');
+    setProfileEmail(user.email || '');
+    setProfilePhoto(user.image || user.photo || '');
+    setProfilePhone(user.phone || '');
+    setProfileAddress(user.address || '');
+  }
 
   // 1. Fetch Admin Analytics
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/analytics/admin`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
         const monthly = (data.monthlyBookings && data.monthlyBookings.length > 0)
-          ? data.monthlyBookings.map((m: any) => ({
+          ? data.monthlyBookings.map((m: { label: string; count: number; revenue?: number }) => ({
               ...m,
               revenue: m.revenue || (m.count ? m.count * 400 : 0),
             }))
@@ -402,8 +402,9 @@ function AdminDashboardContent() {
         setAnalyticsLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend admin analytics fetch failed:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend admin analytics fetch failed:', message);
     }
     setAnalytics(FALLBACK_ANALYTICS);
     setAnalyticsLoading(false);
@@ -413,7 +414,9 @@ function AdminDashboardContent() {
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -423,8 +426,9 @@ function AdminDashboardContent() {
         setUsersLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend users fetch failed:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend users fetch failed:', message);
     }
     setUsersList(FALLBACK_USERS);
     setUsersLoading(false);
@@ -434,7 +438,9 @@ function AdminDashboardContent() {
   const fetchEquipment = useCallback(async () => {
     setEquipmentLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/admin/equipment`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -444,8 +450,9 @@ function AdminDashboardContent() {
         setEquipmentLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend admin equipment fetch failed:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend admin equipment fetch failed:', message);
     }
     setEquipmentList(FALLBACK_EQUIPMENT);
     setEquipmentLoading(false);
@@ -455,7 +462,9 @@ function AdminDashboardContent() {
   const fetchRentals = useCallback(async () => {
     setRentalsLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/admin/bookings`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -465,18 +474,22 @@ function AdminDashboardContent() {
         setRentalsLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend admin bookings fetch failed:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend admin bookings fetch failed:', message);
     }
     setRentalsList(FALLBACK_BOOKINGS);
     setRentalsLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchAnalytics();
-    fetchUsers();
-    fetchEquipment();
-    fetchRentals();
+    const timer = setTimeout(() => {
+      fetchAnalytics();
+      fetchUsers();
+      fetchEquipment();
+      fetchRentals();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchAnalytics, fetchUsers, fetchEquipment, fetchRentals]);
 
   // User Actions: Change Role
@@ -485,15 +498,16 @@ function AdminDashboardContent() {
 
     // Optimistic update
     setUsersList((prev) =>
-      prev.map((u) => (u._id === targetUser._id ? { ...u, role: newRole as any } : u))
+      prev.map((u) => (u._id === targetUser._id ? { ...u, role: newRole as AdminUser['role'] } : u))
     );
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/users/${encodeURIComponent(targetUser._id || targetUser.id || '')}/role`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({ role: newRole }),
         }
@@ -511,7 +525,7 @@ function AdminDashboardContent() {
 
   // User Actions: Delete User
   const handleDeleteUser = async (targetUser: AdminUser) => {
-    const currentUserId = user?.id || (user as any)?._id;
+    const currentUserId = user?.id || (user as { _id?: string } | null)?._id;
     if (currentUserId && (currentUserId === targetUser._id || currentUserId === targetUser.id)) {
       notifyError('Administrative accounts cannot delete their own active session.');
       return;
@@ -530,10 +544,12 @@ function AdminDashboardContent() {
     setUsersList((prev) => prev.filter((u) => u._id !== targetUser._id && u.id !== targetUser._id));
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/users/${encodeURIComponent(targetUser._id || targetUser.id || '')}`,
         {
           method: 'DELETE',
+          headers: authHeaders,
           credentials: 'include',
         }
       );
@@ -551,11 +567,12 @@ function AdminDashboardContent() {
     );
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}/status`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({ status: 'approved' }),
         }
@@ -583,11 +600,12 @@ function AdminDashboardContent() {
     );
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}/status`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({
             status: 'rejected',
@@ -616,10 +634,12 @@ function AdminDashboardContent() {
     setEquipmentList((prev) => prev.filter((e) => e._id !== item._id && e.id !== item._id));
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}`,
         {
           method: 'DELETE',
+          headers: authHeaders,
           credentials: 'include',
         }
       );
@@ -637,11 +657,12 @@ function AdminDashboardContent() {
     setIsUpdatingEquipment(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(editingEquipment._id || editingEquipment.id || '')}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({
             name: editingEquipment.name,
@@ -686,9 +707,10 @@ function AdminDashboardContent() {
     setIsSavingProfile(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users/me`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify({
           name: profileName.trim(),
@@ -1083,7 +1105,7 @@ function AdminDashboardContent() {
                             fontSize: '12px',
                           }}
                           labelStyle={{ color: '#F8F9FA', fontWeight: 'bold' }}
-                          formatter={(val: any) => [val, 'Bookings']}
+                          formatter={(val) => [val ?? 0, 'Bookings']}
                         />
                         <Bar dataKey="count" fill="#06B6D4" radius={[2, 2, 0, 0]} />
                       </BarChart>
@@ -1137,7 +1159,7 @@ function AdminDashboardContent() {
                             fontSize: '12px',
                           }}
                           labelStyle={{ color: '#F8F9FA', fontWeight: 'bold' }}
-                          formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Monthly Volume']}
+                          formatter={(val) => [`$${Number(val ?? 0).toLocaleString()}`, 'Monthly Volume']}
                         />
                         <Area
                           type="monotone"

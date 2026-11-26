@@ -9,7 +9,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { BookNowModal } from '@/components/BookNowModal';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 
 interface EquipmentOwner {
   id?: string;
@@ -313,8 +313,9 @@ function EquipmentDetailView() {
             return;
           }
         }
-      } catch (err: any) {
-        console.warn('Backend fetch failed, checking fallback items:', err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('Backend fetch failed, checking fallback items:', message);
       }
 
       // Check fallback item map
@@ -362,14 +363,21 @@ function EquipmentDetailView() {
 
       // Query server favorites if user session is present
       try {
+        const authHeaders = await getAuthHeaders();
         const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/favorites`, {
+          headers: authHeaders,
           credentials: 'include',
         });
         if (res.ok) {
           const data = await res.json();
-          const favList = data.favorites || data.items || [];
-          const match = favList.some((fav: any) => {
-            const fEqId = fav.equipmentId?._id || fav.equipmentId?.id || fav.equipmentId || fav._id;
+          const favList = (data.favorites || data.items || []) as Array<{
+            _id?: string;
+            equipmentId?: string | { _id?: string; id?: string };
+            equipment?: { _id?: string };
+          }>;
+          const match = favList.some((fav) => {
+            const eqObj = typeof fav.equipmentId === 'object' && fav.equipmentId !== null ? fav.equipmentId : null;
+            const fEqId = eqObj?._id || eqObj?.id || (typeof fav.equipmentId === 'string' ? fav.equipmentId : undefined) || fav._id;
             return fEqId === id || fav.equipment?._id === id;
           });
           if (isMounted) {
@@ -412,11 +420,12 @@ function EquipmentDetailView() {
 
     // Call backend API
     try {
+      const authHeaders = await getAuthHeaders();
       if (nextState) {
         // POST /favorites
         const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/favorites`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({ equipmentId: id }),
         });
@@ -431,6 +440,7 @@ function EquipmentDetailView() {
         // DELETE /favorites/:id
         await fetch(`${API_BASE_URL.replace(/\/$/, '')}/favorites/${encodeURIComponent(id)}`, {
           method: 'DELETE',
+          headers: authHeaders,
           credentials: 'include',
         });
         notifySuccess(`Asset removed from your favorites.`);

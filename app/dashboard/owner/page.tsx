@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+
+const emptySubscribe = () => () => {};
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -19,7 +21,7 @@ import {
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import { syncUserToBackend } from '@/lib/user-sync';
 
 // Types
@@ -46,7 +48,7 @@ interface EquipmentItem {
 interface OwnerBookingItem {
   _id: string;
   id?: string;
-  equipmentId?: any;
+  equipmentId?: string | { _id?: string; id?: string };
   equipmentName?: string;
   equipment?: {
     name?: string;
@@ -210,7 +212,7 @@ function OwnerDashboardContent() {
   // Active Tab: 'analytics' | 'add' | 'my-equipment' | 'rentals' | 'profile'
   const [activeTab, setActiveTab] = useState<'analytics' | 'add' | 'my-equipment' | 'rentals' | 'profile'>('analytics');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [chartMounted, setChartMounted] = useState<boolean>(false);
+  const chartMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   // Analytics State
   const [analytics, setAnalytics] = useState<OwnerAnalyticsData>(FALLBACK_ANALYTICS);
@@ -252,27 +254,24 @@ function OwnerDashboardContent() {
   const [profileAddress, setProfileAddress] = useState<string>('');
   const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
 
-  // Client mounting for Recharts SSR safety
-  useEffect(() => {
-    setChartMounted(true);
-  }, []);
-
   // Initialize Profile form
-  useEffect(() => {
-    if (user) {
-      setProfileName(user.name || '');
-      setProfileEmail(user.email || '');
-      setProfilePhoto(user.image || user.photo || '');
-      setProfilePhone(user.phone || '');
-      setProfileAddress(user.address || '');
-    }
-  }, [user]);
+  const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
+  if (user && syncedUserId !== user.id) {
+    setSyncedUserId(user.id);
+    setProfileName(user.name || '');
+    setProfileEmail(user.email || '');
+    setProfilePhoto(user.image || user.photo || '');
+    setProfilePhone(user.phone || '');
+    setProfileAddress(user.address || '');
+  }
 
   // 1. Fetch Analytics
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/analytics/owner`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -286,8 +285,9 @@ function OwnerDashboardContent() {
         setAnalyticsLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend owner analytics error:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend owner analytics error:', message);
     }
     setAnalytics(FALLBACK_ANALYTICS);
     setAnalyticsLoading(false);
@@ -297,7 +297,9 @@ function OwnerDashboardContent() {
   const fetchMyEquipment = useCallback(async () => {
     setEquipmentLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/equipment/mine`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -307,8 +309,9 @@ function OwnerDashboardContent() {
         setEquipmentLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend getMyEquipment error:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend getMyEquipment error:', message);
     }
     setMyEquipment(FALLBACK_OWNED_EQUIPMENT);
     setEquipmentLoading(false);
@@ -318,7 +321,9 @@ function OwnerDashboardContent() {
   const fetchOwnerBookings = useCallback(async () => {
     setBookingsLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/bookings/owner`, {
+        headers: authHeaders,
         credentials: 'include',
       });
       if (res.ok) {
@@ -328,17 +333,21 @@ function OwnerDashboardContent() {
         setBookingsLoading(false);
         return;
       }
-    } catch (err: any) {
-      console.warn('Backend getOwnerBookings error:', err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Backend getOwnerBookings error:', message);
     }
     setOwnerBookings(FALLBACK_OWNER_BOOKINGS);
     setBookingsLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchAnalytics();
-    fetchMyEquipment();
-    fetchOwnerBookings();
+    const timer = setTimeout(() => {
+      fetchAnalytics();
+      fetchMyEquipment();
+      fetchOwnerBookings();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchAnalytics, fetchMyEquipment, fetchOwnerBookings]);
 
   // ImgBB Upload Handler
@@ -364,8 +373,9 @@ function OwnerDashboardContent() {
           setIsUploadingImgBB(false);
           return;
         }
-      } catch (err: any) {
-        console.warn('ImgBB API failed, falling back to FileReader:', err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('ImgBB API failed, falling back to FileReader:', message);
       }
     }
 
@@ -415,9 +425,10 @@ function OwnerDashboardContent() {
     };
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/equipment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify(payload),
       });
@@ -442,7 +453,7 @@ function OwnerDashboardContent() {
       // Refresh list and jump to table
       await fetchMyEquipment();
       setActiveTab('my-equipment');
-    } catch (err: any) {
+    } catch {
       // Local fallback item creation so owner is not blocked
       const localCreated: EquipmentItem = {
         _id: 'eq_local_' + Math.random().toString(36).substring(2, 9),
@@ -472,10 +483,12 @@ function OwnerDashboardContent() {
     setMyEquipment((prev) => prev.filter((e) => e._id !== item._id && e.id !== item._id));
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/equipment/${encodeURIComponent(item._id || item.id || '')}`,
         {
           method: 'DELETE',
+          headers: authHeaders,
           credentials: 'include',
         }
       );
@@ -497,11 +510,12 @@ function OwnerDashboardContent() {
     setIsUpdatingEquipment(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/equipment/${encodeURIComponent(editingItem._id || editingItem.id || '')}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           credentials: 'include',
           body: JSON.stringify({
             name: editingItem.name,
@@ -552,9 +566,10 @@ function OwnerDashboardContent() {
     setIsSavingProfile(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users/me`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         credentials: 'include',
         body: JSON.stringify({
           name: profileName.trim(),
@@ -912,7 +927,7 @@ function OwnerDashboardContent() {
                             fontSize: '12px',
                           }}
                           labelStyle={{ color: '#F8F9FA', fontWeight: 'bold' }}
-                          formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Monthly Earnings']}
+                          formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, 'Monthly Earnings']}
                         />
                         <Area
                           type="monotone"
@@ -977,7 +992,7 @@ function OwnerDashboardContent() {
                             fontSize: '12px',
                           }}
                           labelStyle={{ color: '#F8F9FA', fontWeight: 'bold' }}
-                          formatter={(value: any) => [value, 'Mobilizations']}
+                          formatter={(value) => [value ?? 0, 'Mobilizations']}
                         />
                         <Bar dataKey="count" fill="#06B6D4" radius={[2, 2, 0, 0]} />
                       </BarChart>

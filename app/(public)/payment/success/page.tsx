@@ -54,6 +54,8 @@ function PaymentSuccessContent() {
   const [booking, setBooking] = useState<ConfirmedBooking | null>(null);
   const [payment, setPayment] = useState<PaymentRecord | null>(null);
 
+  const [retryCount, setRetryCount] = useState<number>(0);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -88,37 +90,13 @@ function PaymentSuccessContent() {
           setPayment(data.payment || null);
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (isMounted) {
-          // If server is not running or testing fallback, provide calibrated order summary
-          console.warn('Backend confirmation fallback:', err.message);
-          setBooking({
-            _id: 'bk_' + Math.random().toString(36).substring(2, 9),
-            equipment: {
-              name: 'Industrial Heavy Fleet Asset',
-              category: 'Construction',
-              location: 'Houston Yard, TX',
-              price: 450,
-              rentalType: 'daily',
-              image: 'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=800&q=80',
-            },
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 4 * 86400000).toISOString(),
-            duration: 4,
-            quantity: 1,
-            totalPrice: 1800,
-            status: 'confirmed',
-            paymentStatus: 'paid',
-            transactionId: sessionId || 'txn_demo_' + Math.random().toString(36).substring(2, 9),
-            phone: '+1 (555) 749-0192',
-            address: 'Main Jobsite Yard, Sector 4',
-          });
-          setPayment({
-            transactionId: sessionId,
-            amount: 1800,
-            currency: 'USD',
-            status: 'paid',
-          });
+          const message =
+            err instanceof Error ? err.message : 'Unable to verify payment confirmation.';
+          setError(message);
+          setBooking(null);
+          setPayment(null);
           setLoading(false);
         }
       }
@@ -129,7 +107,7 @@ function PaymentSuccessContent() {
     return () => {
       isMounted = false;
     };
-  }, [sessionId]);
+  }, [sessionId, retryCount]);
 
   // Loading State
   if (loading) {
@@ -164,9 +142,18 @@ function PaymentSuccessContent() {
           </h2>
           <p className="font-mono text-xs text-neutral-400">{error}</p>
           <div className="pt-4 flex flex-col gap-2">
+            {sessionId && (
+              <button
+                type="button"
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="py-3 px-6 bg-[#FF5500] hover:bg-[#E64A00] text-black font-heading font-black text-xs uppercase tracking-widest transition-colors"
+              >
+                Retry Verification
+              </button>
+            )}
             <Link
               href="/dashboard"
-              className="py-3 px-6 bg-[#FF5500] hover:bg-[#E64A00] text-black font-heading font-black text-xs uppercase tracking-widest transition-colors"
+              className="py-3 px-6 border border-[#FF5500] text-[#FF5500] hover:bg-[#FF5500]/10 font-heading font-black text-xs uppercase tracking-widest transition-colors"
             >
               Check My Dashboard
             </Link>

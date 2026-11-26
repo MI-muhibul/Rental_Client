@@ -25,7 +25,7 @@ interface EquipmentItem {
   brand?: string;
   model?: string;
   status?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Calibrated fallback fleet assets to ensure smooth experience if backend is offline
@@ -226,20 +226,22 @@ function EquipmentCatalogContent() {
   }, [searchInput]);
 
   // Sync initial URL category if searchParams changes
-  useEffect(() => {
-    const urlCat = searchParams.get('category');
-    if (urlCat) {
-      setSelectedCategory(urlCat);
-      setCurrentPage(1);
-    }
-  }, [searchParams]);
+  const urlCat = searchParams.get('category');
+  const [prevUrlCat, setPrevUrlCat] = useState<string | null>(urlCat);
+  if (urlCat && urlCat !== prevUrlCat) {
+    setPrevUrlCat(urlCat);
+    setSelectedCategory(urlCat);
+    setCurrentPage(1);
+  }
 
   // 2. Fetch Equipment from Backend on Every Parameter Change
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
 
     async function fetchFleet() {
+      await Promise.resolve();
+      if (!isMounted) return;
+      setLoading(true);
       try {
         const query = new URLSearchParams();
         if (debouncedSearch) query.set('search', debouncedSearch);

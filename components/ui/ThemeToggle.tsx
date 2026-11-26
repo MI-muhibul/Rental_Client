@@ -1,24 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 
 export interface ThemeToggleProps {
   className?: string;
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
-  const [theme, setTheme] = useState<'industrial' | 'industrial-light'>('industrial');
-  const [mounted, setMounted] = useState(false);
+const emptySubscribe = () => () => {};
 
-  useEffect(() => {
-    setMounted(true);
-    // Read active theme from documentElement attribute or localStorage
-    const currentTheme =
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+  const [theme, setTheme] = useState<'industrial' | 'industrial-light'>(() => {
+    if (typeof window === 'undefined') return 'industrial';
+    return (
       (document.documentElement.getAttribute('data-theme') as 'industrial' | 'industrial-light') ||
       (localStorage.getItem('theme') as 'industrial' | 'industrial-light') ||
-      'industrial';
-    setTheme(currentTheme);
-  }, []);
+      'industrial'
+    );
+  });
 
   const toggleTheme = () => {
     const nextTheme = theme === 'industrial' ? 'industrial-light' : 'industrial';
