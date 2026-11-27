@@ -214,8 +214,13 @@ function OwnerDashboardContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const chartMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  // Analytics State
-  const [analytics, setAnalytics] = useState<OwnerAnalyticsData>(FALLBACK_ANALYTICS);
+  // Analytics State (initialized empty so fake fallback metrics never flash before live data loads)
+  const [analytics, setAnalytics] = useState<OwnerAnalyticsData>({
+    listedEquipment: 0,
+    completedRentals: 0,
+    totalEarnings: 0,
+    monthlyEarnings: [],
+  });
   const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(true);
 
   // My Equipment State
@@ -840,7 +845,8 @@ function OwnerDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    {analytics.completedRentals} <span className="text-sm font-mono text-emerald-400 font-normal">Orders</span>
+                    {analyticsLoading ? '—' : analytics.completedRentals}{' '}
+                    <span className="text-sm font-mono text-emerald-400 font-normal">Orders</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     100% On-time return & dispatch
@@ -854,7 +860,7 @@ function OwnerDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-[#FF5500]" />
                   </div>
                   <div className="font-heading font-black text-3xl text-[#FF5500]">
-                    ${analytics.totalEarnings.toLocaleString()}
+                    {analyticsLoading ? '—' : `$${analytics.totalEarnings.toLocaleString()}`}
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Lifetime settled payout
@@ -868,7 +874,9 @@ function OwnerDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-cyan-400" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    ${(analytics.monthlyEarnings[analytics.monthlyEarnings.length - 2]?.earnings || 4200).toLocaleString()}
+                    {analyticsLoading
+                      ? '—'
+                      : `$${(analytics.monthlyEarnings[analytics.monthlyEarnings.length - 1]?.earnings ?? 0).toLocaleString()}`}
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     30-Day trailing fleet income

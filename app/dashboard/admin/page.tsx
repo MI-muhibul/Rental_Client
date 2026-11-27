@@ -331,8 +331,16 @@ function AdminDashboardContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const chartMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  // Analytics state
-  const [analytics, setAnalytics] = useState<AdminAnalytics>(FALLBACK_ANALYTICS);
+  // Analytics state (initialized empty so fake fallback metrics never flash before live data loads)
+  const [analytics, setAnalytics] = useState<AdminAnalytics>({
+    totalUsers: 0,
+    totalEquipment: 0,
+    totalBookings: 0,
+    pendingApprovals: 0,
+    completedRentals: 0,
+    totalRevenue: 0,
+    monthlyBookings: [],
+  });
   const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(true);
 
   // Users state
@@ -1035,7 +1043,8 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-cyan-400" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    {analytics.totalUsers} <span className="text-sm font-mono text-neutral-500 font-normal">Accounts</span>
+                    {analyticsLoading ? '—' : analytics.totalUsers}{' '}
+                    <span className="text-sm font-mono text-neutral-500 font-normal">Accounts</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Renters, Fleet Owners & Admins
@@ -1049,7 +1058,8 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-[#FF5500]" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    {analytics.totalEquipment} <span className="text-sm font-mono text-[#FF5500] font-normal">Units</span>
+                    {analyticsLoading ? '—' : analytics.totalEquipment}{' '}
+                    <span className="text-sm font-mono text-[#FF5500] font-normal">Units</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Cataloged across all categories
@@ -1063,7 +1073,8 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                   </div>
                   <div className="font-heading font-black text-3xl text-amber-400">
-                    {analytics.pendingApprovals} <span className="text-sm font-mono text-amber-500 font-normal">Review Needed</span>
+                    {analyticsLoading ? '—' : analytics.pendingApprovals}{' '}
+                    <span className="text-sm font-mono text-amber-500 font-normal">Review Needed</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-400">
                     Awaiting verification review
@@ -1077,7 +1088,8 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    {analytics.totalBookings} <span className="text-sm font-mono text-emerald-400 font-normal">Logged</span>
+                    {analyticsLoading ? '—' : analytics.totalBookings}{' '}
+                    <span className="text-sm font-mono text-emerald-400 font-normal">Logged</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Global reservation transactions
@@ -1091,7 +1103,8 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
                   <div className="font-heading font-black text-3xl text-neutral-100">
-                    {analytics.completedRentals} <span className="text-sm font-mono text-emerald-400 font-normal">100% Fulfilled</span>
+                    {analyticsLoading ? '—' : analytics.completedRentals}{' '}
+                    <span className="text-sm font-mono text-emerald-400 font-normal">100% Fulfilled</span>
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Successful on-site handovers
@@ -1105,7 +1118,7 @@ function AdminDashboardContent() {
                     <span className="w-2 h-2 rounded-full bg-[#FF5500]" />
                   </div>
                   <div className="font-heading font-black text-3xl text-[#FF5500]">
-                    ${analytics.totalRevenue.toLocaleString()}
+                    {analyticsLoading ? '—' : `$${analytics.totalRevenue.toLocaleString()}`}
                   </div>
                   <div className="text-[11px] font-mono text-neutral-500">
                     Gross volume processed via Stripe
