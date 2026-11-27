@@ -36,20 +36,22 @@ export default function DashboardLayout({
                 </span>
               </Link>
 
-              {/* Navigation Tabs */}
+              {/* Navigation Tabs (scoped to active role) */}
               <nav className="flex items-center gap-1 sm:gap-2">
-                <Link
-                  href="/dashboard"
-                  className={`px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider rounded-xs transition-colors ${
-                    isCustomerActive
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'text-gray-400 hover:text-white hover:bg-base-300'
-                  }`}
-                >
-                  Customer Portal
-                </Link>
+                {(normalizedRole === 'customer' || normalizedRole === 'renter') && (
+                  <Link
+                    href="/dashboard"
+                    className={`px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider rounded-xs transition-colors ${
+                      isCustomerActive
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-base-300'
+                    }`}
+                  >
+                    Customer Portal
+                  </Link>
+                )}
 
-                {(normalizedRole === 'owner' || normalizedRole === 'admin') && (
+                {normalizedRole === 'owner' && (
                   <Link
                     href="/dashboard/owner"
                     className={`px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider rounded-xs transition-colors ${
