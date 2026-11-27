@@ -15,8 +15,9 @@ declare global {
 if (!global._authMongoClient) {
   global._authMongoClient = new MongoClient(uri, {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 20000,
+    connectTimeoutMS: 20000,
+    socketTimeoutMS: 20000,
   });
 }
 
