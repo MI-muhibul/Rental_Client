@@ -380,6 +380,7 @@ function AdminDashboardContent() {
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/analytics/admin`, {
         headers: authHeaders,
         credentials: 'include',
+        cache: 'no-store',
       });
       if (res.ok) {
         const data = await res.json();
@@ -418,6 +419,7 @@ function AdminDashboardContent() {
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/users`, {
         headers: authHeaders,
         credentials: 'include',
+        cache: 'no-store',
       });
       if (res.ok) {
         const data = await res.json();
@@ -442,6 +444,7 @@ function AdminDashboardContent() {
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/admin/equipment`, {
         headers: authHeaders,
         credentials: 'include',
+        cache: 'no-store',
       });
       if (res.ok) {
         const data = await res.json();
@@ -466,6 +469,7 @@ function AdminDashboardContent() {
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/admin/bookings`, {
         headers: authHeaders,
         credentials: 'include',
+        cache: 'no-store',
       });
       if (res.ok) {
         const data = await res.json();
@@ -483,6 +487,7 @@ function AdminDashboardContent() {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) return;
     const timer = setTimeout(() => {
       fetchAnalytics();
       fetchUsers();
@@ -490,11 +495,12 @@ function AdminDashboardContent() {
       fetchRentals();
     }, 0);
     return () => clearTimeout(timer);
-  }, [fetchAnalytics, fetchUsers, fetchEquipment, fetchRentals]);
+  }, [user?.id, fetchAnalytics, fetchUsers, fetchEquipment, fetchRentals]);
 
   // User Actions: Change Role
   const handleChangeRole = async (targetUser: AdminUser, newRole: string) => {
     if (targetUser.role === newRole) return;
+    const previousRole = targetUser.role;
 
     // Optimistic update
     setUsersList((prev) =>
@@ -513,13 +519,18 @@ function AdminDashboardContent() {
         }
       );
 
-      if (res.ok) {
-        notifySuccess(`Role for ${targetUser.name || targetUser.email} changed to ${newRole.toUpperCase()}.`);
-      } else {
-        notifySuccess(`Clearance updated to ${newRole.toUpperCase()}.`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to update user role');
       }
-    } catch {
-      notifySuccess(`Clearance updated to ${newRole.toUpperCase()}.`);
+
+      notifySuccess(`Role for ${targetUser.name || targetUser.email} changed to ${newRole.toUpperCase()}.`);
+      await fetchUsers();
+    } catch (err: unknown) {
+      setUsersList((prev) =>
+        prev.map((u) => (u._id === targetUser._id ? { ...u, role: previousRole } : u))
+      );
+      notifyError(err instanceof Error ? err.message : 'Failed to update user role.');
     }
   };
 
@@ -540,12 +551,13 @@ function AdminDashboardContent() {
 
     if (!confirmed) return;
 
+    const previousUsers = usersList;
     // Optimistic delete
     setUsersList((prev) => prev.filter((u) => u._id !== targetUser._id && u.id !== targetUser._id));
 
     try {
       const authHeaders = await getAuthHeaders();
-      await fetch(
+      const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/users/${encodeURIComponent(targetUser._id || targetUser.id || '')}`,
         {
           method: 'DELETE',
@@ -553,14 +565,21 @@ function AdminDashboardContent() {
           credentials: 'include',
         }
       );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to delete user');
+      }
       notifySuccess(`User record deleted.`);
-    } catch {
-      notifySuccess(`User record deleted.`);
+      await Promise.all([fetchUsers(), fetchAnalytics()]);
+    } catch (err: unknown) {
+      setUsersList(previousUsers);
+      notifyError(err instanceof Error ? err.message : 'Failed to delete user.');
     }
   };
 
   // Equipment Actions: Approve Status
   const handleApproveEquipment = async (item: AdminEquipment) => {
+    const previousList = equipmentList;
     // Optimistic update
     setEquipmentList((prev) =>
       prev.map((e) => (e._id === item._id ? { ...e, status: 'approved' } : e))
@@ -568,7 +587,7 @@ function AdminDashboardContent() {
 
     try {
       const authHeaders = await getAuthHeaders();
-      await fetch(
+      const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}/status`,
         {
           method: 'PATCH',
@@ -577,9 +596,15 @@ function AdminDashboardContent() {
           body: JSON.stringify({ status: 'approved' }),
         }
       );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to approve equipment');
+      }
       notifySuccess(`"${item.name}" approved for fleet deployment.`);
-    } catch {
-      notifySuccess(`"${item.name}" approved.`);
+      await Promise.all([fetchEquipment(), fetchAnalytics()]);
+    } catch (err: unknown) {
+      setEquipmentList(previousList);
+      notifyError(err instanceof Error ? err.message : 'Failed to approve equipment.');
     }
   };
 
@@ -594,6 +619,7 @@ function AdminDashboardContent() {
 
     if (!confirmed) return;
 
+    const previousList = equipmentList;
     // Optimistic update
     setEquipmentList((prev) =>
       prev.map((e) => (e._id === item._id ? { ...e, status: 'rejected' } : e))
@@ -601,7 +627,7 @@ function AdminDashboardContent() {
 
     try {
       const authHeaders = await getAuthHeaders();
-      await fetch(
+      const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}/status`,
         {
           method: 'PATCH',
@@ -613,9 +639,15 @@ function AdminDashboardContent() {
           }),
         }
       );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to reject equipment');
+      }
       notifySuccess(`"${item.name}" marked as rejected.`);
-    } catch {
-      notifySuccess(`"${item.name}" marked as rejected.`);
+      await Promise.all([fetchEquipment(), fetchAnalytics()]);
+    } catch (err: unknown) {
+      setEquipmentList(previousList);
+      notifyError(err instanceof Error ? err.message : 'Failed to reject equipment.');
     }
   };
 
@@ -630,12 +662,13 @@ function AdminDashboardContent() {
 
     if (!confirmed) return;
 
+    const previousList = equipmentList;
     // Optimistic deletion
     setEquipmentList((prev) => prev.filter((e) => e._id !== item._id && e.id !== item._id));
 
     try {
       const authHeaders = await getAuthHeaders();
-      await fetch(
+      const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(item._id || item.id || '')}`,
         {
           method: 'DELETE',
@@ -643,9 +676,15 @@ function AdminDashboardContent() {
           credentials: 'include',
         }
       );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to delete equipment');
+      }
       notifySuccess(`Asset purged from database.`);
-    } catch {
-      notifySuccess(`Asset purged.`);
+      await Promise.all([fetchEquipment(), fetchAnalytics()]);
+    } catch (err: unknown) {
+      setEquipmentList(previousList);
+      notifyError(err instanceof Error ? err.message : 'Failed to delete equipment.');
     }
   };
 
@@ -658,7 +697,7 @@ function AdminDashboardContent() {
 
     try {
       const authHeaders = await getAuthHeaders();
-      await fetch(
+      const res = await fetch(
         `${API_BASE_URL.replace(/\/$/, '')}/admin/equipment/${encodeURIComponent(editingEquipment._id || editingEquipment.id || '')}`,
         {
           method: 'PATCH',
@@ -680,17 +719,19 @@ function AdminDashboardContent() {
         }
       );
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to update equipment');
+      }
+
       setEquipmentList((prev) =>
         prev.map((e) => (e._id === editingEquipment._id ? editingEquipment : e))
       );
       notifySuccess('Equipment specifications updated.');
       setEditingEquipment(null);
-    } catch {
-      notifySuccess('Equipment specifications updated.');
-      setEquipmentList((prev) =>
-        prev.map((e) => (e._id === editingEquipment._id ? editingEquipment : e))
-      );
-      setEditingEquipment(null);
+      await fetchEquipment();
+    } catch (err: unknown) {
+      notifyError(err instanceof Error ? err.message : 'Failed to update equipment.');
     } finally {
       setIsUpdatingEquipment(false);
     }
